@@ -203,6 +203,7 @@ bool liboai::Conversation::Update(std::string_view response) & noexcept(false) {
 			for (auto& choice : j["choices"].items()) {
 				if (choice.value().contains("message")) {
 					if (choice.value()["message"].contains("role") && choice.value()["message"].contains("content")) {
+
 						if (!choice.value()["message"]["content"].is_null()) {
 							this->_conversation["messages"].push_back(
 								{
@@ -219,8 +220,10 @@ bool liboai::Conversation::Update(std::string_view response) & noexcept(false) {
 								}
 							);
 						}
-						
-						if (choice.value()["message"].contains("function_call")) {
+
+						return true; // conversation updated successfully
+					}
+					else if (choice.value()["message"].contains("role") && choice.value()["message"].contains("function_call")) {
 							// if a function_call is present in the response, the
 							// conversation is not updated as there is no assistant
 							// response to be added. However, we do add the function
@@ -228,16 +231,14 @@ bool liboai::Conversation::Update(std::string_view response) & noexcept(false) {
 
 							if (choice.value()["message"]["function_call"].contains("name")) {
 								this->_conversation["function_call"] = { { "name", choice.value()["message"]["function_call"]["name"] } };
+								if (choice.value()["message"]["function_call"].contains("arguments")) {
+									this->_conversation["function_call"].push_back({ "arguments", choice.value()["message"]["function_call"]["arguments"] });
+								}
 							}
-							if (choice.value()["message"]["function_call"].contains("arguments")) {
-								this->_conversation["function_call"] = { { "arguments", choice.value()["message"]["function_call"]["arguments"] } };
-							}
-							
 							this->_last_resp_is_fc = true;
-						}
 
-						return true; // conversation updated successfully
-					}
+							return true; // conversation updated successfully
+					}	
 					else {
 						return false; // response is not valid
 					}
@@ -274,11 +275,11 @@ bool liboai::Conversation::Update(std::string_view response) & noexcept(false) {
 
 					if (j["message"]["function_call"].contains("name")) {
 						this->_conversation["function_call"] = { { "name", j["message"]["function_call"]["name"] } };
-					}
-					if (j["message"]["function_call"].contains("arguments")) {
-						this->_conversation["function_call"] = { { "arguments", j["message"]["function_call"]["arguments"] } };
-					}
 
+						if (j["message"]["function_call"].contains("arguments")) {
+							this->_conversation["function_call"].push_back({ "arguments", j["message"]["function_call"]["arguments"] });
+						}
+					}
 					this->_last_resp_is_fc = true;
 				}
 
